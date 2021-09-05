@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Text;
+using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
 using NullLib.ConsoleEx;
@@ -11,22 +13,30 @@ namespace TestConsole
         {
             ConsoleSc.Prompt = ">>> ";
         }
+        static int GetCharLen(char c)
+        {
+            UnicodeRange combiningHalfMarks = UnicodeRanges.CombiningHalfMarks;
+            if (combiningHalfMarks.FirstCodePoint <= c && combiningHalfMarks.Length < c - combiningHalfMarks.FirstCodePoint)
+                return 1;
+            return 2;
+        }
+        static int GetStrLen(string str)
+        {
+            int rst = 0;
+            foreach (var c in str)
+                rst += GetCharLen(c);
+            return rst;
+            
+        }
         static async Task Main(string[] args)
         {
-
-
-            Task.Run(() =>
-            {
-                while (true)
-                {
-                    Thread.Sleep(2000);
-                    ConsoleSc.WriteLine("嘿嘿");
-                }
-            });
+            StringBuilder sb = new StringBuilder();
             while(true)
             {
-                string instr = ConsoleSc.ReadLine();
-                ConsoleSc.WriteLine(instr);
+                ConsoleSc.ReadLine();
+
+                //string instr = Console.ReadLine();
+                //Console.WriteLine(ConsoleText.CalcStringLength(instr));
             }
         }
     }

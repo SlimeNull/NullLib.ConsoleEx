@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NullLib.ConsoleEx
@@ -9,18 +10,17 @@ namespace NullLib.ConsoleEx
     public static class ConsoleSc
     {
         private const ConsoleKey defaultReadUntilKey = ConsoleKey.Enter;
-        private static string newLine = Console.Out.NewLine;
         static bool isReading;
         static bool notIntercept;
         static bool insertMode = false;
         static int readIndex = 0;
         static int readHistoryIndex = 0;
         static string readStr;
-        static List<string> readHistory = new List<string>();
-        static StringBuilder readBuffer = new StringBuilder();
+        static readonly List<string> readHistory = new List<string>();
+        static readonly StringBuilder readBuffer = new StringBuilder();
         static ConsoleKey readUntil;
 
-        static object textWriteLock = new object();
+        static readonly object textWriteLock = new object();
         static string prompt;
 
         static int
@@ -152,7 +152,7 @@ namespace NullLib.ConsoleEx
                 if (insertMode)
                     Console.CursorSize = 100;
                 else
-                    Console.CursorSize = 10;
+                    Console.CursorSize = 25;
 
                 Console.SetCursorPosition(r_cursorLeft, r_cursorTop);
                 SetCursorVisible(true);
@@ -235,7 +235,7 @@ namespace NullLib.ConsoleEx
             if (readIndex > readBuffer.Length)
                 readIndex = readBuffer.Length;
         }
-        public static async Task<string> ReadUntilAsync(ConsoleKey until, bool intercept)
+        public static async Task<string> ReadAsync(ConsoleKey until, bool intercept)
         {
             await Task.Run(WaitForInput);
 
@@ -266,11 +266,11 @@ namespace NullLib.ConsoleEx
             Console.WriteLine();
             return readBuffer.ToString();
         }
-        public static Task<string> ReadLineAsync(bool intercept) => ReadUntilAsync(defaultReadUntilKey, intercept);
-        public static Task<string> ReadLineAsync() => ReadUntilAsync(defaultReadUntilKey, false);
-        public static string ReadLine(ConsoleKey until, bool intercept) => ReadUntilAsync(until, intercept).Result;
-        public static string ReadLine(bool intercept) => ReadUntilAsync(defaultReadUntilKey, intercept).Result;
-        public static string ReadLine() => ReadUntilAsync(defaultReadUntilKey, false).Result;
+        public static Task<string> ReadLineAsync(bool intercept) => ReadAsync(defaultReadUntilKey, intercept);
+        public static Task<string> ReadLineAsync() => ReadAsync(defaultReadUntilKey, false);
+        public static string ReadLine(ConsoleKey until, bool intercept) => ReadAsync(until, intercept).Result;
+        public static string ReadLine(bool intercept) => ReadAsync(defaultReadUntilKey, intercept).Result;
+        public static string ReadLine() => ReadAsync(defaultReadUntilKey, false).Result;
         public static int Read() => Console.Read();
         public static char ReadChar() => ReadChar(false);
         public static char ReadChar(bool intercept)
@@ -283,43 +283,52 @@ namespace NullLib.ConsoleEx
             while (char.IsControl(keyInfo.KeyChar));
             return keyInfo.KeyChar;
         }
-        public static void Write(string text, string end, bool renderRead)
+
+        public static async Task WriteAsync(string text, string end, bool renderRead)
         {
-            lock (textWriteLock)
-            {
-                SetCursorVisible(false);
+            TextWriter stdout = Console.Out;
 
-                if (isReading)
-                    Console.SetCursorPosition(r_startLeft, r_startTop);
-                Console.Write(text);
 
-                w_cursorLeft = Console.CursorLeft;
-                w_cursorTop = Console.CursorTop;
+            Monitor.Enter(textWriteLock);
 
-                int spaceEx = MeasureSpace(w_cursorLeft, w_cursorTop, r_endLeft, r_endTop);
-                if (spaceEx > 0)
-                    Console.Write(new string(' ', spaceEx));
+            SetCursorVisible(false);
 
-                Console.SetCursorPosition(w_cursorLeft, w_cursorTop);
-                Console.Write(end);
+            if (isReading)
+                Console.SetCursorPosition(r_startLeft, r_startTop);
+            await stdout.WriteAsync(text);
 
-                w_endLeft = Console.CursorLeft;
-                w_endTop = Console.CursorTop;
+            w_cursorLeft = Console.CursorLeft;
+            w_cursorTop = Console.CursorTop;
 
-                r_startLeft = w_endLeft;
-                r_startTop = w_endTop;
+            int spaceEx = MeasureSpace(w_cursorLeft, w_cursorTop, r_endLeft, r_endTop);
+            if (spaceEx > 0)
+                await stdout.WriteAsync(new string(' ', spaceEx));
 
-                SetCursorVisible(true);
-            }
+            Console.SetCursorPosition(w_cursorLeft, w_cursorTop);
+            await stdout.WriteAsync(end);
+
+            w_endLeft = Console.CursorLeft;
+            w_endTop = Console.CursorTop;
+
+            r_startLeft = w_endLeft;
+            r_startTop = w_endTop;
+
+            SetCursorVisible(true);
+
+            Monitor.Exit(textWriteLock);
 
             if (renderRead && isReading && notIntercept)
                 RenderReadText();
         }
-        public static void WriteLine(string text, bool renderRead) => Write(text, newLine, renderRead);
-        public static void Write(string text, bool renderRead) => Write(text, null, renderRead);
-        public static void WriteLine(string text) => Write(text, newLine, true);
-        public static void WriteLine() => Write(null, null, true);
-        public static void Write(string text) => Write(text, null, true);
+        public static Task WriteLineAsync(string text, bool renderRead) => WriteAsync(text, Console.Out.NewLine, renderRead);
+        public static Task WriteLineAsync(string text) => WriteAsync(text, Console.Out.NewLine, true);
+        public static Task WriteAsync(string text, bool renderRead) => WriteAsync(text, null, renderRead);
+        public static Task WriteAsync(string text) => WriteAsync(text, null, true);
+        public static void WriteLine(string text, bool renderRead) => WriteAsync(text, Console.Out.NewLine, renderRead).Wait();
+        public static void WriteLine(string text) => WriteAsync(text, Console.Out.NewLine, true).Wait();
+        public static void WriteLine() => WriteAsync(null, null, true).Wait();
+        public static void Write(string text, bool renderRead) => WriteAsync(text, null, renderRead).Wait();
+        public static void Write(string text) => WriteAsync(text, null, true).Wait();
         public static ConsoleKeyInfo ReadKey() => Console.ReadKey();
         public static ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
     }

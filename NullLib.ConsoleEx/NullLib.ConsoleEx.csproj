@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>1.0.4.2</Version>
+    <Version>1.0.4.3</Version>
     <Authors>SlimeNull</Authors>
     <Company>无</Company>
     <Description>Extensions for Console apps: get char display width, dynamic input output. 控制台应用扩展: 获取字符显示宽度, 动态输入输出</Description>
