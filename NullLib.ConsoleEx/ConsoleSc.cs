@@ -123,6 +123,7 @@ namespace NullLib.ConsoleEx
         }
         private static void RenderReadText()
         {
+            TextWriter stdout = Console.Out;
             lock (textWriteLock)
             {
                 string before = readBuffer.ToString(0, readIndex);
@@ -135,19 +136,20 @@ namespace NullLib.ConsoleEx
                     r_lastEndLeft = r_endLeft,
                     r_lastEndTop = r_endTop;
 
-                Console.Write(prompt);
-                Console.Write(before);
+
+                stdout.Write(prompt);
+                stdout.Write(before);
                 r_cursorLeft = Console.CursorLeft;
                 r_cursorTop = Console.CursorTop;
 
-                Console.Write(after);
+                stdout.Write(after);
                 r_endLeft = Console.CursorLeft;
                 r_endTop = Console.CursorTop;
 
                 int spaceEx = MeasureSpace(r_endLeft, r_endTop, r_lastEndLeft, r_lastEndTop);
 
                 if (spaceEx > 0)
-                    Console.Write(new string(' ', spaceEx));
+                    stdout.Write(new string(' ', spaceEx));
 
                 if (insertMode)
                     Console.CursorSize = 100;
