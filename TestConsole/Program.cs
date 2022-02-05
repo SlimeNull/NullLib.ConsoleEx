@@ -15,7 +15,6 @@ namespace TestConsole
         }
         static int GetCharLen(char c)
         {
-            UnicodeRanges.As    //qwq
             UnicodeRange combiningHalfMarks = UnicodeRanges.CombiningHalfMarks;
             if (combiningHalfMarks.FirstCodePoint <= c && combiningHalfMarks.Length < c - combiningHalfMarks.FirstCodePoint)
                 return 1;

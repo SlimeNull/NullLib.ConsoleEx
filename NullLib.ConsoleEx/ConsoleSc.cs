@@ -9,7 +9,7 @@ namespace NullLib.ConsoleEx
 {
     public static class ConsoleSc
     {
-        private const ConsoleKey defaultReadUntilKey = ConsoleKey.Enter;
+        private const ConsoleKey readlineUntilKey = ConsoleKey.Enter;
         static bool isReading;
         static bool notIntercept;
         static bool overwriteMode = false;
@@ -122,6 +122,14 @@ namespace NullLib.ConsoleEx
             }
             catch { }
         }
+        private static void SetCursorSize(int size)
+        {
+            try
+            {
+                Console.CursorSize = size;
+            }
+            catch { }
+        }
         private static void RenderReadText()
         {
             TextWriter stdout = Console.Out;
@@ -153,9 +161,9 @@ namespace NullLib.ConsoleEx
                     stdout.Write(new string(' ', spaceEx));
 
                 if (overwriteMode)
-                    Console.CursorSize = 100;
+                    SetCursorSize(100);
                 else
-                    Console.CursorSize = 25;
+                    SetCursorSize(25);
 
                 Console.SetCursorPosition(r_cursorLeft, r_cursorTop);
                 SetCursorVisible(true);
@@ -269,11 +277,10 @@ namespace NullLib.ConsoleEx
             Console.WriteLine();
             return readBuffer.ToString();
         }
-        public static Task<string>  ReadLineAsync(bool intercept) => ReadAsync(defaultReadUntilKey, intercept);
-        public static Task<string> ReadLineAsync() => ReadAsync(defaultReadUntilKey, false);
-        public static string ReadLine(ConsoleKey until, bool intercept) => ReadAsync(until, intercept).Result;
-        public static string ReadLine(bool intercept) => ReadAsync(defaultReadUntilKey, intercept).Result;
-        public static string ReadLine() => ReadAsync(defaultReadUntilKey, false).Result;
+        public static Task<string>  ReadLineAsync(bool intercept) => ReadAsync(readlineUntilKey, intercept);
+        public static Task<string> ReadLineAsync() => ReadAsync(readlineUntilKey, false);
+        public static string ReadLine(bool intercept) => ReadAsync(readlineUntilKey, intercept).Result;
+        public static string ReadLine() => ReadAsync(readlineUntilKey, false).Result;
         public static int Read() => Console.Read();
         public static char ReadChar() => ReadChar(false);
         public static char ReadChar(bool intercept)
