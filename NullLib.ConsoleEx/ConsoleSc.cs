@@ -12,7 +12,7 @@ namespace NullLib.ConsoleEx
         private const ConsoleKey defaultReadUntilKey = ConsoleKey.Enter;
         static bool isReading;
         static bool notIntercept;
-        static bool insertMode = false;
+        static bool overwriteMode = false;
         static int readIndex = 0;
         static int readHistoryIndex = 0;
         static string readStr;
@@ -34,6 +34,7 @@ namespace NullLib.ConsoleEx
 
         public static StringBuilder ReadBuffer => readBuffer;
         public static bool IsReading => isReading;
+        public static bool IsOverwriteMode => overwriteMode;
         public static int ReadStartLeft => r_startLeft;
         public static int ReadStartTop => r_startTop;
 
@@ -151,7 +152,7 @@ namespace NullLib.ConsoleEx
                 if (spaceEx > 0)
                     stdout.Write(new string(' ', spaceEx));
 
-                if (insertMode)
+                if (overwriteMode)
                     Console.CursorSize = 100;
                 else
                     Console.CursorSize = 25;
@@ -194,7 +195,7 @@ namespace NullLib.ConsoleEx
                         ProcDeleteKey(modifiers.PrsControl());
                         break;
                     case ConsoleKey.Insert:
-                        insertMode ^= true;
+                        overwriteMode ^= true;
                         break;
                     case ConsoleKey.Home:
                         SetReadIndex(0);
@@ -217,7 +218,7 @@ namespace NullLib.ConsoleEx
         }
         private static void PutInputChar(char c)
         {
-            if (insertMode && readIndex < readBuffer.Length)
+            if (overwriteMode && readIndex < readBuffer.Length)
                 readBuffer[readIndex] = c;
             else
                 readBuffer.Insert(readIndex, c);
@@ -268,7 +269,7 @@ namespace NullLib.ConsoleEx
             Console.WriteLine();
             return readBuffer.ToString();
         }
-        public static Task<string> ReadLineAsync(bool intercept) => ReadAsync(defaultReadUntilKey, intercept);
+        public static Task<string>  ReadLineAsync(bool intercept) => ReadAsync(defaultReadUntilKey, intercept);
         public static Task<string> ReadLineAsync() => ReadAsync(defaultReadUntilKey, false);
         public static string ReadLine(ConsoleKey until, bool intercept) => ReadAsync(until, intercept).Result;
         public static string ReadLine(bool intercept) => ReadAsync(defaultReadUntilKey, intercept).Result;
@@ -290,26 +291,25 @@ namespace NullLib.ConsoleEx
         {
             TextWriter stdout = Console.Out;
 
+            Monitor.Enter(textWriteLock);                                      // 文本写入锁
 
-            Monitor.Enter(textWriteLock);
-
-            SetCursorVisible(false);
+            SetCursorVisible(false);                                           // 隐藏光标
 
             if (isReading)
-                Console.SetCursorPosition(r_startLeft, r_startTop);
-            await stdout.WriteAsync(text);
+                Console.SetCursorPosition(r_startLeft, r_startTop);            // 重置光标位置到 ReadLine 时的起始位置
+            await stdout.WriteAsync(text);                                     // 将要写的内容输出
 
-            w_cursorLeft = Console.CursorLeft;
+            w_cursorLeft = Console.CursorLeft;                                 // 记录末尾坐标
             w_cursorTop = Console.CursorTop;
 
             int spaceEx = MeasureSpace(w_cursorLeft, w_cursorTop, r_endLeft, r_endTop);
             if (spaceEx > 0)
-                await stdout.WriteAsync(new string(' ', spaceEx));
+                await stdout.WriteAsync(new string(' ', spaceEx));             // 填充剩余内容
 
-            Console.SetCursorPosition(w_cursorLeft, w_cursorTop);
+            Console.SetCursorPosition(w_cursorLeft, w_cursorTop);              // 回到记录的末尾坐标
             await stdout.WriteAsync(end);
 
-            w_endLeft = Console.CursorLeft;
+            w_endLeft = Console.CursorLeft; 
             w_endTop = Console.CursorTop;
 
             r_startLeft = w_endLeft;
